@@ -1,0 +1,37 @@
+spring:
+  cloud:
+    gcp:
+      project-id: "${MCART_GCP_PROJECT_ID:${SPRING_CLOUD_GCP_PROJECT_ID:my-project-chat-ai-487408}}"
+      credentials:
+        location: ${GCP_CREDENTIALS_PATH:}
+      pubsub:
+        enabled: ${SPRING_CLOUD_GCP_PUBSUB_ENABLED:true}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://localhost:8081}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/order}
+    username: ${SPRING_DATASOURCE_USERNAME:order_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:order_password}
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    hibernate:
+      ddl-auto: none
+order:
+  cart:
+    base-url: ${ORDER_CART_BASE_URL:http://localhost:8087}
+  inventory:
+    base-url: ${ORDER_INVENTORY_BASE_URL:http://localhost:8086}
+  payment:
+    base-url: ${ORDER_PAYMENT_BASE_URL:http://localhost:8088}
+  product:
+    base-url: ${ORDER_PRODUCT_BASE_URL:http://localhost:8084}
+  user:
+    base-url: ${ORDER_USER_BASE_URL:http://localhost:8082}
+  pubsub:
+    enabled: ${ORDER_PUBSUB_ENABLED:true}
+    topic: ${ORDER_PUBSUB_TOPIC:order-paid-events}
+
