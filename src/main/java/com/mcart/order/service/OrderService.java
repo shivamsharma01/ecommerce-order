@@ -7,6 +7,8 @@ import com.mcart.order.exception.CheckoutFailedException;
 import com.mcart.order.repository.OrderItemRepository;
 import com.mcart.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,11 +17,13 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final DownstreamClients downstream;
+    private final ObjectProvider<OrderPaidPublisher> orderPaidPublisher;
 
     @Transactional
     public CheckoutResponse checkout(UUID userId, String bearerToken) {
@@ -72,6 +76,8 @@ public class OrderService {
             throw new CheckoutFailedException("Payment failed");
         }
 
+        final String paymentId = payment.paymentId();
+
         // 3) persist order + items
         OrderEntity order = new OrderEntity();
         order.setUserId(userId);
@@ -92,6 +98,20 @@ public class OrderService {
 
         // 4) clear cart
         downstream.clearCart(bearerToken);
+
+        Optional<String> emailOpt = downstream.getCustomerEmail(bearerToken);
+        if (emailOpt.isEmpty()) {
+            log.warn("No customer email for order {} (user profile missing or unverified); receipt event may omit email", saved.getOrderId());
+        }
+        orderPaidPublisher.ifAvailable(pub -> pub.publish(
+                saved.getOrderId(),
+                userId,
+                orderIdForDownstream,
+                paymentId,
+                emailOpt.orElse(null),
+                saved.getTotalAmount(),
+                items
+        ));
 
         return new CheckoutResponse(saved.getOrderId().toString(), saved.getStatus(), saved.getTotalAmount(), items);
     }

@@ -17,6 +17,13 @@ management:
 spring:
   application:
     name: order
+  cloud:
+    gcp:
+      project-id: ${SPRING_CLOUD_GCP_PROJECT_ID:}
+      credentials:
+        location: ${GCP_CREDENTIALS_PATH:}
+      pubsub:
+        enabled: ${SPRING_CLOUD_GCP_PUBSUB_ENABLED:false}
   security:
     oauth2:
       resourceserver:
@@ -40,4 +47,9 @@ order:
     base-url: ${ORDER_PAYMENT_BASE_URL:http://localhost:8088}
   product:
     base-url: ${ORDER_PRODUCT_BASE_URL:http://localhost:8084}
+  user:
+    base-url: ${ORDER_USER_BASE_URL:http://localhost:8082}
+  pubsub:
+    enabled: ${ORDER_PUBSUB_ENABLED:false}
+    topic: ${ORDER_PUBSUB_TOPIC:order-paid-events}
 

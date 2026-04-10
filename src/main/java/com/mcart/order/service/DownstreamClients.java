@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.Optional;
+
 @Component
 public class DownstreamClients {
 
@@ -23,6 +25,9 @@ public class DownstreamClients {
 
     @Value("${order.product.base-url}")
     private String productBaseUrl;
+
+    @Value("${order.user.base-url}")
+    private String userBaseUrl;
 
     public CartResponse getCart(String bearerToken) {
         return rest.get()
@@ -73,6 +78,22 @@ public class DownstreamClients {
                 .retrieve()
                 .toEntity(ChargeResponse.class);
         return r.getBody();
+    }
+
+    public Optional<String> getCustomerEmail(String bearerToken) {
+        try {
+            UserMeResponse body = rest.get()
+                    .uri(userBaseUrl + "/user/me")
+                    .header(HttpHeaders.AUTHORIZATION, bearerToken)
+                    .retrieve()
+                    .body(UserMeResponse.class);
+            if (body == null || body.getEmail() == null || body.getEmail().isBlank()) {
+                return Optional.empty();
+            }
+            return Optional.of(body.getEmail().trim());
+        } catch (Exception ex) {
+            return Optional.empty();
+        }
     }
 }
 
