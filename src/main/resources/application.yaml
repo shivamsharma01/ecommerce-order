@@ -31,9 +31,6 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
-  flyway:
-    enabled: true
-
 order:
   cart:
     base-url: ${ORDER_CART_BASE_URL:http://localhost:8087}
