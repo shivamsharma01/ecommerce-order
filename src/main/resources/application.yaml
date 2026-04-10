@@ -1,0 +1,46 @@
+server:
+  port: ${SERVER_PORT:8089}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /
+      path-mapping:
+        health: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+spring:
+  application:
+    name: order
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://localhost:8081}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/order}
+    username: ${SPRING_DATASOURCE_USERNAME:order_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:order_password}
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true
+
+order:
+  cart:
+    base-url: ${ORDER_CART_BASE_URL:http://localhost:8087}
+  inventory:
+    base-url: ${ORDER_INVENTORY_BASE_URL:http://localhost:8086}
+  payment:
+    base-url: ${ORDER_PAYMENT_BASE_URL:http://localhost:8088}
+  product:
+    base-url: ${ORDER_PRODUCT_BASE_URL:http://localhost:8084}
+
