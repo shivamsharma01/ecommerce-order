@@ -46,10 +46,14 @@ public class DownstreamClients {
     }
 
     public ProductResponse getProduct(String productId) {
-        return rest.get()
-                .uri(productBaseUrl + "/api/products/" + productId)
-                .retrieve()
-                .body(ProductResponse.class);
+        try {
+            return rest.get()
+                    .uri(productBaseUrl + "/api/products/" + productId)
+                    .retrieve()
+                    .body(ProductResponse.class);
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     public void decrementInventory(String bearerToken, InventoryAdjustRequest req) {

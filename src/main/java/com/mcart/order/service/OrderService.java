@@ -42,10 +42,16 @@ public class OrderService {
             ProductResponse p = products.computeIfAbsent(ci.productId(), downstream::getProduct);
             if (p == null) throw new CheckoutFailedException("Product not found: " + ci.productId());
 
-            long unitPriceMinor = Math.round(p.price() * 100.0); // INR -> paise for consistency
+            long unitPriceMinor = Math.round(priceOrZero(p) * 100.0); // INR -> paise for consistency
             long lineTotal = unitPriceMinor * ci.quantity();
             total += lineTotal;
-            items.add(new OrderItemResponse(ci.productId(), ci.quantity(), unitPriceMinor, lineTotal));
+            items.add(new OrderItemResponse(
+                    ci.productId(),
+                    ci.quantity(),
+                    unitPriceMinor,
+                    lineTotal,
+                    p.name(),
+                    firstThumbnail(p)));
         }
 
         if (items.isEmpty() || total <= 0) {
@@ -122,11 +128,53 @@ public class OrderService {
         List<OrderSummaryResponse> out = new ArrayList<>();
         for (OrderEntity o : orders) {
             List<OrderItemResponse> items = orderItemRepository.findByOrderId(o.getOrderId()).stream()
-                    .map(i -> new OrderItemResponse(i.getProductId(), i.getQuantity(), i.getUnitPrice(), i.getLineTotal()))
+                    .map(i -> new OrderItemResponse(
+                            i.getProductId(), i.getQuantity(), i.getUnitPrice(), i.getLineTotal(), null, null))
                     .toList();
-            out.add(new OrderSummaryResponse(o.getOrderId().toString(), o.getStatus(), o.getTotalAmount(), o.getCreatedAt(), items));
+            out.add(new OrderSummaryResponse(
+                    o.getOrderId().toString(),
+                    o.getStatus(),
+                    o.getTotalAmount(),
+                    o.getCreatedAt(),
+                    enrichOrderLines(items)));
         }
         return out;
+    }
+
+    private List<OrderItemResponse> enrichOrderLines(List<OrderItemResponse> lines) {
+        if (lines.isEmpty()) {
+            return lines;
+        }
+        Map<String, ProductResponse> cache = new HashMap<>();
+        List<OrderItemResponse> out = new ArrayList<>(lines.size());
+        for (OrderItemResponse it : lines) {
+            ProductResponse p = cache.computeIfAbsent(it.productId(), downstream::getProduct);
+            if (p != null) {
+                out.add(new OrderItemResponse(
+                        it.productId(),
+                        it.quantity(),
+                        it.unitPrice(),
+                        it.lineTotal(),
+                        p.name(),
+                        firstThumbnail(p)));
+            } else {
+                out.add(new OrderItemResponse(
+                        it.productId(), it.quantity(), it.unitPrice(), it.lineTotal(), null, null));
+            }
+        }
+        return out;
+    }
+
+    private static double priceOrZero(ProductResponse p) {
+        return p.price() != null ? p.price() : 0.0;
+    }
+
+    private static String firstThumbnail(ProductResponse p) {
+        if (p.gallery() == null || p.gallery().isEmpty()) {
+            return null;
+        }
+        String u = p.gallery().getFirst().thumbnailUrl();
+        return u != null && !u.isBlank() ? u : null;
     }
 }
 
