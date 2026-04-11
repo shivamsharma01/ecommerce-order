@@ -31,6 +31,7 @@ public class OrderService {
         if (cart == null || cart.items() == null || cart.items().isEmpty()) {
             throw new CheckoutFailedException("Cart is empty");
         }
+        log.info("Checkout started userId={} cartLineCount={}", userId, cart.items().size());
 
         // Compute totals from current product prices (public endpoint)
         Map<String, ProductResponse> products = new HashMap<>();
@@ -73,11 +74,15 @@ public class OrderService {
             payment = downstream.charge(bearerToken, new ChargeRequest(orderIdForDownstream, total));
         } catch (RuntimeException ex) {
             // treat downstream as payment failure; rollback stock
+            log.warn("Payment downstream error after inventory decrement; rolling back stock userId={} ref={}",
+                    userId, orderIdForDownstream);
             downstream.incrementInventory(bearerToken, adjust);
             throw new CheckoutFailedException("Payment failed");
         }
 
         if (payment == null || !"SUCCESS".equalsIgnoreCase(payment.status())) {
+            log.warn("Payment not successful; rolling back stock userId={} ref={} status={}",
+                    userId, orderIdForDownstream, payment != null ? payment.status() : "null");
             downstream.incrementInventory(bearerToken, adjust);
             throw new CheckoutFailedException("Payment failed");
         }
@@ -105,6 +110,9 @@ public class OrderService {
         // 4) clear cart
         downstream.clearCart(bearerToken);
 
+        log.info("Checkout completed userId={} orderId={} lineCount={} totalMinor={} paymentId={}",
+                userId, saved.getOrderId(), items.size(), saved.getTotalAmount(), paymentId);
+
         Optional<String> emailOpt = downstream.getCustomerEmail(bearerToken);
         if (emailOpt.isEmpty()) {
             log.warn("No customer email for order {} (user profile missing or unverified); receipt event may omit email", saved.getOrderId());
@@ -125,6 +133,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<OrderSummaryResponse> listOrders(UUID userId) {
         List<OrderEntity> orders = orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        log.debug("Listing orders userId={} orderCount={}", userId, orders.size());
         List<OrderSummaryResponse> out = new ArrayList<>();
         for (OrderEntity o : orders) {
             List<OrderItemResponse> items = orderItemRepository.findByOrderId(o.getOrderId()).stream()
@@ -158,6 +167,7 @@ public class OrderService {
                         p.name(),
                         firstThumbnail(p)));
             } else {
+                log.debug("Order line enrichment skipped (product unavailable) productId={}", it.productId());
                 out.add(new OrderItemResponse(
                         it.productId(), it.quantity(), it.unitPrice(), it.lineTotal(), null, null));
             }
