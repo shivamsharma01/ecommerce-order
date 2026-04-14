@@ -7,7 +7,7 @@ import com.mcart.order.exception.AddressRequiredException;
 import com.mcart.order.exception.CheckoutFailedException;
 import com.mcart.order.repository.OrderItemRepository;
 import com.mcart.order.repository.OrderRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
