@@ -1,5 +1,6 @@
 package com.mcart.order.controller;
 
+import com.mcart.order.dto.CheckoutRequest;
 import com.mcart.order.dto.CheckoutResponse;
 import com.mcart.order.dto.OrderSummaryResponse;
 import com.mcart.order.service.OrderService;
@@ -25,10 +26,11 @@ public class OrderController {
     @PostMapping("/checkout")
     public ResponseEntity<CheckoutResponse> checkout(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @RequestBody(required = false) CheckoutRequest body
     ) {
         UUID userId = UUID.fromString(jwt.getClaimAsString(CLAIM_USER_ID));
-        CheckoutResponse r = orderService.checkout(userId, authorization);
+        CheckoutResponse r = orderService.checkout(userId, authorization, body);
         return ResponseEntity.ok(r);
     }
 

@@ -3,9 +3,11 @@ package com.mcart.order.service;
 import com.mcart.order.dto.*;
 import com.mcart.order.entity.OrderEntity;
 import com.mcart.order.entity.OrderItemEntity;
+import com.mcart.order.exception.AddressRequiredException;
 import com.mcart.order.exception.CheckoutFailedException;
 import com.mcart.order.repository.OrderItemRepository;
 import com.mcart.order.repository.OrderRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -24,9 +26,11 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final DownstreamClients downstream;
     private final ObjectProvider<OrderPaidPublisher> orderPaidPublisher;
+    private final ObjectMapper objectMapper;
 
     @Transactional
-    public CheckoutResponse checkout(UUID userId, String bearerToken) {
+    public CheckoutResponse checkout(UUID userId, String bearerToken, CheckoutRequest req) {
+        SelectedAddress selected = resolveShippingAddress(userId, bearerToken, req);
         CartResponse cart = downstream.getCart(bearerToken);
         if (cart == null || cart.items() == null || cart.items().isEmpty()) {
             throw new CheckoutFailedException("Cart is empty");
@@ -95,6 +99,8 @@ public class OrderService {
         order.setTotalAmount(total);
         order.setStatus("PAID");
         order.setCreatedAt(Instant.now());
+        order.setShippingAddressId(selected.addressId);
+        order.setShippingAddressJson(selected.addressJson);
         OrderEntity saved = orderRepository.save(order);
 
         for (OrderItemResponse it : items) {
@@ -127,7 +133,13 @@ public class OrderService {
                 items
         ));
 
-        return new CheckoutResponse(saved.getOrderId().toString(), saved.getStatus(), saved.getTotalAmount(), items);
+        return new CheckoutResponse(
+                saved.getOrderId().toString(),
+                saved.getStatus(),
+                saved.getTotalAmount(),
+                selected.address,
+                items
+        );
     }
 
     @Transactional(readOnly = true)
@@ -145,6 +157,7 @@ public class OrderService {
                     o.getStatus(),
                     o.getTotalAmount(),
                     o.getCreatedAt(),
+                    decodeShippingAddress(o.getShippingAddressJson()),
                     enrichOrderLines(items)));
         }
         return out;
@@ -186,5 +199,55 @@ public class OrderService {
         String u = p.gallery().getFirst().thumbnailUrl();
         return u != null && !u.isBlank() ? u : null;
     }
+
+    private SelectedAddress resolveShippingAddress(UUID userId, String bearerToken, CheckoutRequest req) {
+        UUID addressId = null;
+        if (req != null && req.addressId() != null && !req.addressId().isBlank()) {
+            try {
+                addressId = UUID.fromString(req.addressId().trim());
+            } catch (IllegalArgumentException ex) {
+                throw new CheckoutFailedException("Invalid addressId");
+            }
+        }
+
+        Optional<UserAddressResponse> addressOpt = addressId != null
+                ? downstream.getAddressById(bearerToken, addressId)
+                : downstream.getDefaultAddress(bearerToken);
+
+        if (addressOpt.isEmpty()) {
+            throw new AddressRequiredException("Please add a delivery address to continue.");
+        }
+
+        UserAddressResponse a = addressOpt.get();
+        ShippingAddress shipping = new ShippingAddress(
+                a.fullName(),
+                a.phone(),
+                a.line1(),
+                a.line2(),
+                a.city(),
+                a.state(),
+                a.pincode(),
+                a.country()
+        );
+
+        try {
+            String json = objectMapper.writeValueAsString(shipping);
+            return new SelectedAddress(a.addressId(), shipping, json);
+        } catch (Exception ex) {
+            log.error("Failed to serialize shipping address for userId={}", userId, ex);
+            throw new CheckoutFailedException("Could not save delivery address");
+        }
+    }
+
+    private ShippingAddress decodeShippingAddress(String json) {
+        if (json == null || json.isBlank()) return null;
+        try {
+            return objectMapper.readValue(json, ShippingAddress.class);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private record SelectedAddress(UUID addressId, ShippingAddress address, String addressJson) {}
 }
 

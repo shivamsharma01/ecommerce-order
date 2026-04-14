@@ -6,6 +6,7 @@ public record CheckoutResponse(
         String orderId,
         String status,
         long totalAmount,
+        ShippingAddress shippingAddress,
         List<OrderItemResponse> items
 ) {
 }

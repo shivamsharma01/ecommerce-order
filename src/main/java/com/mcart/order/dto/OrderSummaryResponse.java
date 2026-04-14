@@ -8,6 +8,7 @@ public record OrderSummaryResponse(
         String status,
         long totalAmount,
         Instant createdAt,
+        ShippingAddress shippingAddress,
         List<OrderItemResponse> items
 ) {
 }

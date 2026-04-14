@@ -26,6 +26,12 @@ public class OrderEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "shipping_address_id")
+    private UUID shippingAddressId;
+
+    @Column(name = "shipping_address_json", columnDefinition = "jsonb")
+    private String shippingAddressJson;
+
     public UUID getOrderId() {
         return orderId;
     }
@@ -60,6 +66,22 @@ public class OrderEntity {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public UUID getShippingAddressId() {
+        return shippingAddressId;
+    }
+
+    public void setShippingAddressId(UUID shippingAddressId) {
+        this.shippingAddressId = shippingAddressId;
+    }
+
+    public String getShippingAddressJson() {
+        return shippingAddressJson;
+    }
+
+    public void setShippingAddressJson(String shippingAddressJson) {
+        this.shippingAddressJson = shippingAddressJson;
     }
 }
 

@@ -7,7 +7,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 public class DownstreamClients {
@@ -97,6 +99,45 @@ public class DownstreamClients {
             return Optional.of(body.getEmail().trim());
         } catch (Exception ex) {
             return Optional.empty();
+        }
+    }
+
+    public Optional<UserAddressResponse> getDefaultAddress(String bearerToken) {
+        try {
+            UserAddressResponse body = rest.get()
+                    .uri(userBaseUrl + "/user/addresses/default")
+                    .header(HttpHeaders.AUTHORIZATION, bearerToken)
+                    .retrieve()
+                    .body(UserAddressResponse.class);
+            return Optional.ofNullable(body);
+        } catch (Exception ex) {
+            return Optional.empty();
+        }
+    }
+
+    public Optional<UserAddressResponse> getAddressById(String bearerToken, UUID addressId) {
+        try {
+            UserAddressResponse body = rest.get()
+                    .uri(userBaseUrl + "/user/addresses/" + addressId)
+                    .header(HttpHeaders.AUTHORIZATION, bearerToken)
+                    .retrieve()
+                    .body(UserAddressResponse.class);
+            return Optional.ofNullable(body);
+        } catch (Exception ex) {
+            return Optional.empty();
+        }
+    }
+
+    public List<UserAddressResponse> listAddresses(String bearerToken) {
+        try {
+            UserAddressResponse[] body = rest.get()
+                    .uri(userBaseUrl + "/user/addresses")
+                    .header(HttpHeaders.AUTHORIZATION, bearerToken)
+                    .retrieve()
+                    .body(UserAddressResponse[].class);
+            return body != null ? List.of(body) : List.of();
+        } catch (Exception ex) {
+            return List.of();
         }
     }
 }
