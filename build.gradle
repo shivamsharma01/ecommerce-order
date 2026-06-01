@@ -33,6 +33,10 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'com.google.cloud:spring-cloud-gcp-starter-pubsub:7.4.3'
 
+	// Hibernate @JdbcTypeCode(SqlTypes.JSON) uses Jackson 2 FormatMapper (com.fasterxml.jackson), not tools.jackson (Boot 4 default).
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
+	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
 	runtimeOnly 'org.postgresql:postgresql'
 
 	compileOnly 'org.projectlombok:lombok'
