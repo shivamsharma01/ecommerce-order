@@ -1,6 +1,8 @@
 package com.mcart.order.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -29,6 +31,7 @@ public class OrderEntity {
     @Column(name = "shipping_address_id")
     private UUID shippingAddressId;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "shipping_address_json", columnDefinition = "jsonb")
     private String shippingAddressJson;
 
